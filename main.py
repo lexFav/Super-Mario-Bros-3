@@ -1,10 +1,7 @@
 from pygame.locals import *
-import numpy as np
 import colorsys
 import pygame
 import coords
-import random
-import time
 import math
 import os
 pygame.init()
@@ -550,6 +547,7 @@ oh_no_sound = pygame.mixer.Sound('assets/sounds/Oh_No.wav')
 course_clear_sound = pygame.mixer.Sound('assets/sounds/Course_Clear.mp3')
 star_power_sound = pygame.mixer.Sound('assets/sounds/Star_Power.wav')
 
+# Writes in the tile grid file
 def write_tile_grid():
     string = level_store.level_store[LEVEL_NUM - 1]
     for level in level_store.level_store:
@@ -559,10 +557,12 @@ def write_tile_grid():
     with open('tile_grid.txt', 'w') as f:
         f.write(string)
 
+# Reads the tile grid file
 def read_tile_grid():
     with open('tile_grid.txt', 'r') as f:
         return f.readlines()
 
+# Checks if an entity is colliding with another
 def colliding(object_1, object_2):
     pos_1 = coords.pygame([object_1.x, object_1.y], [WIDTH, HEIGHT])
     pos_2 = coords.pygame([object_2.x, object_2.y], [WIDTH, HEIGHT])
@@ -574,6 +574,7 @@ def colliding(object_1, object_2):
     rect_2 = pygame.Rect(pos_2[0] - width_2, pos_2[1] - height_2, width_2 * 2, height_2 * 2)
     return rect_1.colliderect(rect_2)                                                                                                                   
 
+# Finds the distance between entities
 def distance(object_1, object_2):
     x_1 = object_1.x
     x_2 = object_2.x
@@ -582,6 +583,7 @@ def distance(object_1, object_2):
     return math.sqrt((x_1 - x_2)**2 + (y_1 - y_2)**2)
 
 class Mario:
+    # Initialize
     def __init__(self):
         self.real_x = 0
         self.real_y = 0
@@ -611,6 +613,7 @@ class Mario:
         self.throw = 0
         LEVEL_start_game_loop_respawn()
 
+    # Reset the player position
     def reset_player(self):
         global minus_TINY, CAMERA_X, CAMERA_Y, MARIO, FIREBALLS, STAR_POWER
 
@@ -638,6 +641,7 @@ class Mario:
         self.direction = 90
         self.move_camera()
 
+    # Gets the tile info at a position
     def get_tile_at(self, x, y):
         self.tile_grid_x = math.floor(x / TILE_SIZE)
         self.tile_grid_y = math.floor(y / TILE_SIZE)
@@ -648,6 +652,7 @@ class Mario:
             self.tile = TILE_GRID[self.tile_index - 1]
         self.tile_shape = TILE_SHAPE[self.tile - 1]
 
+    # Fixes the collision in a certain direction
     def fix_collision_in_direction(self, dx, dy):
         self.fix_dx = dx
         self.fix_dy = dy
@@ -667,6 +672,7 @@ class Mario:
             if self.solid < 1:
                 return
 
+    # Fixes the collision in a cetain point
     def fix_collision_at_point(self, x, y, part=''):
         self.get_tile_at(x, y)
 
@@ -719,6 +725,7 @@ class Mario:
         if self.fix_dx > 0:
             self.x += minus_TINY - self.mod_x
 
+    # Makes the smoke that follows mario
     def make_skid_smoke(self):
         self.player_frame += 1
         if self.player_frame % 3 < 1:
@@ -727,6 +734,7 @@ class Mario:
             PARTICLES.append(self.y - (20 * (TILE_SIZE / 32)))
             skid_sound.play()
 
+    # Left-right controls
     def handle_keys_left_right(self):
         if self.player_action == 'crouch':
             if abs(self.speed_x) > 0.4:
@@ -766,6 +774,7 @@ class Mario:
                 self.temp = 0.2
             self.player_frame += self.temp
 
+    # Jump-crouch controls
     def handle_keys_jump_crouch(self):
         self.speed_y -= 2
         if self.speed_y < -22 * (TILE_SIZE / 32):
@@ -791,6 +800,7 @@ class Mario:
                 else:
                     self.jumping = 0
 
+    # Fireball controls
     def handle_keys_fire(self):
         global FIREBALLS
 
@@ -802,6 +812,7 @@ class Mario:
                     fireball_sound.play()
                     mario_fireball()
 
+    # Getting up from crouch
     def handle_get_up(self):
         self.player_action = ''
         self.orig_y = self.y
@@ -811,6 +822,7 @@ class Mario:
             self.y = self.orig_y
             self.speed_x += self.direction / -200
 
+    # Editor controls
     def handle_god_mode(self):
         self.speed_x += 6 * controls.x_axis * (TILE_SIZE / 32)
         self.speed_y += 6 * controls.y_axis * (TILE_SIZE / 32)
@@ -820,6 +832,7 @@ class Mario:
         self.x += self.speed_x
         self.y += self.speed_y
 
+    # Moves mario left-right
     def move_sprite_x(self):
         self.orig_y = self.y
         self.x += self.speed_x
@@ -832,6 +845,7 @@ class Mario:
         elif self.y > self.orig_y:
             self.speed_x = self.speed_x * 0.85
 
+    # Moves mairo up-down
     def move_sprite_y(self):
         self.y += self.speed_y
         self.falling += 1
@@ -844,6 +858,7 @@ class Mario:
                 self.bump_head()
             self.speed_y = 0
         
+    # Bumps on Question Block
     def bump_head(self):
         global BUMP_INDEX
 
@@ -852,6 +867,7 @@ class Mario:
         if self.tile == 20:
             BUMP_INDEX = self.tile_index
         
+    # Picks the image based on circumstances
     def paint_sprite(self):
         self.costume = BIG
 
@@ -895,6 +911,7 @@ class Mario:
         costume_number = [idx for idx, key in enumerate(temp) if key[0] == MARIO + 'Walk1'][0] + 1
         self.costume = mario_imgs[costume_number + (math.floor(self.player_frame) % 4)]
 
+    # Checks for coins
     def check_around_player_at_xy(self, x, y):
         global COINS
 
@@ -904,12 +921,14 @@ class Mario:
             COINS += 1
             coin_sound.play()
 
+    # Checks for coins, and falling off
     def check_around_player(self):
         if self.y < 0:
             mario_lose_life()
         self.check_around_player_at_xy(self.x, self.y - (TILE_SIZE / 4))
         self.check_around_player_at_xy(self.x, self.y + (TILE_SIZE / 4))
         
+    # Limits camera range
     def limit_camera(self, edge_x, edge_y):
         global CAMERA_X, CAMERA_Y
 
@@ -925,6 +944,7 @@ class Mario:
         if CAMERA_Y > (TILE_SIZE * GRID_HEIGHT) - edge_y:
             CAMERA_Y = (TILE_SIZE * GRID_HEIGHT) - edge_y
 
+    # Moves camera
     def move_camera(self):
         global CAMERA_X, CAMERA_Y
 
@@ -936,21 +956,25 @@ class Mario:
         else:
             self.limit_camera(CENTER_X + TILE_SIZE, CENTER_Y)
 
+    # Starts game
     def LEVEL_start_game_loop(self):
         global GAME_LOOP_RUNNING, COINS
         COINS = 0
         GAME_LOOP_RUNNING = True
 
+    # Continues game
     def LEVEL_continue_game_loop(self):
         global GAME_LOOP_RUNNING
         GAME_LOOP_RUNNING = True
 
+    # Starts game and respawns
     def LEVEL_start_game_loop_respawn(self):
         global GAME_LOOP_RUNNING, COINS
         self.reset_player()
         COINS = 0
         GAME_LOOP_RUNNING = True
 
+    # Spawns after level loads
     def LEVEL_done_loading(self):
         try:
             self.spawn_index = TILE_GRID.index(28) + 1
@@ -959,10 +983,12 @@ class Mario:
         except:
             self.spawn_index = 0
 
+    # Stops level
     def LEVEL_stop(self):
         global GAME_LOOP_RUNNING
         GAME_LOOP_RUNNING = False
 
+    # Player functions
     def move_player(self):
         global BUMP_INDEX
 
@@ -984,6 +1010,7 @@ class Mario:
             self.handle_keys_fire()
         self.paint_sprite()
 
+    # Actions after enemies move
     def move_player_after_enemy(self):
         global BOUNCE_PLAYER
 
@@ -996,6 +1023,7 @@ class Mario:
         self.move_camera()
         self.paint_sprite()
 
+    # Changes invulnerability
     def position_tiles(self):
         if self.invulnerable > 0:
             self.invulnerable += -1
@@ -1005,6 +1033,7 @@ class Mario:
         else:
             self.ghost = 99
 
+    # Mario death animation
     def mario_lose_life(self):
         global GAME_LOOP_RUNNING
         
@@ -1033,6 +1062,7 @@ class Mario:
         level_store.LEVEL_load()
         LEVEL_start_game_loop_respawn()
 
+    # Mario downgrade animation
     def mario_hurt(self):
         global GAME_LOOP_RUNNING, MARIO
 
@@ -1065,6 +1095,7 @@ class Mario:
 
         LEVEL_continue_game_loop()
 
+    # Mario level complete animation
     def mario_level_complete(self):
         global GAME_LOOP_RUNNING, LEVEL_NUM
         GAME_LOOP_RUNNING = False
@@ -1096,6 +1127,7 @@ class Mario:
         level_store.LEVEL_load()
         LEVEL_start_game_loop_respawn()
 
+    # Mario upgrade animation
     def collect_1up(self):
         global MARIO, GAME_LOOP_RUNNING
 
@@ -1113,6 +1145,7 @@ class Mario:
 
         LEVEL_continue_game_loop()
 
+    # Loops between big and small mario
     def loop_transformation(self):
         for _ in range(3):
             clock.tick(FPS)
@@ -1127,6 +1160,7 @@ class Mario:
             draw()
             pygame.display.flip()
 
+    # Draw mario
     def draw(self):
         image = self.costume
 
@@ -1186,6 +1220,7 @@ class Mario:
             screen.blit(pygame.transform.flip(image, True, False), [pos[0] - (14 * (TILE_SIZE / 32)), pos[1] - (27 * (TILE_SIZE / 32))])
 
 class Tile:
+    # Initialize
     def __init__(self, x, y, tile_idx):
         self.tile_x = x
         self.tile_y = y
@@ -1195,14 +1230,17 @@ class Tile:
         self.real_y = y
         self.bumped = 0
 
+    # Loops the tiles from left to right and vice versa
     def loop_tile_x(self, tile_skip):
         self.tile_x += tile_skip * TILE_SIZE
         self.tile_index += tile_skip * GRID_HEIGHT
 
+    # Loops the tiles from top to bottom and vice versa
     def loop_tile_y(self, tile_skip):
         self.tile_y += tile_skip * TILE_SIZE
         self.tile_index += tile_skip
 
+    # Graphics for mouse tile
     def editor_brush(self):
         if EDITOR < 1 or MOUSE_DOWN():
             return
@@ -1218,11 +1256,13 @@ class Tile:
         self.draw(image)
         image.set_alpha(255)
 
+    # Repositions tile
     def LEVEL_done_loading(self):
         if self.tile_index != None:
             self.tile_index = 1 + math.floor(self.tile_y / TILE_SIZE)
             self.tile_index += GRID_HEIGHT  * math.floor(self.tile_x / 32)
 
+    # Positions tile
     def position_tiles(self):
         global COINS
 
@@ -1269,6 +1309,7 @@ class Tile:
             self.bumped += -30
             self.real_y += (24 * (TILE_SIZE / 32)) * sin(self.bumped)
 
+    # Draws tile
     def draw(self, image=0):
         if self.tile == 2:
             return
@@ -1292,6 +1333,7 @@ class Tile:
                 screen.blit(image, [pos[0] - (TILE_SIZE / 2), pos[1] - (TILE_SIZE / 2)])
 
 class Enemy:
+    # Initialize
     def __init__(self, dummy=False, info=False):
         if dummy:
             self.type = None
@@ -1321,6 +1363,7 @@ class Enemy:
         LAYERS.remove('enemy')
         LAYERS.insert(LAYERS_BACKGROUND + 2, 'enemy')
 
+    # Delete clone
     def delete_clone(self):
         global FIREBALLS
 
@@ -1329,6 +1372,7 @@ class Enemy:
 
         enemies.remove(self)
 
+    # Script for when clone is created
     def start_as_clone(self, info):
         self.type = info[0]
         self.costume = info[1]
@@ -1372,6 +1416,7 @@ class Enemy:
             self.visible = 2
             self.frame = 0
 
+    # Sets clone type
     def set_type(self, type_, costume, width, height, frame=None):
         x = math.floor((self.spawn_index - 1) / GRID_HEIGHT)
         y = (self.spawn_index - 1) % GRID_HEIGHT
@@ -1380,6 +1425,7 @@ class Enemy:
 
         enemies.append(Enemy(info=[type_, costume, width * (TILE_SIZE / 32), height * (TILE_SIZE / 32), x, y, frame, self.spawn_index]))
 
+    # Spawns clone type
     def spawn_type(self, tile_type):
         if not self.type == None:
             return
@@ -1405,6 +1451,7 @@ class Enemy:
         if tile_type == 69:
             self.set_type('Koopa', 5, 16, 24)
 
+    # Spawn loop
     def spawn_loop(self):
         self.object_item_num = 1
 
@@ -1415,6 +1462,7 @@ class Enemy:
 
         self.object_item_num = None
 
+    # Switches clone image
     def switch_costume(self, costume):
         if isinstance(costume, int):
             if costume == 0:
@@ -1423,6 +1471,7 @@ class Enemy:
         else:
             self.real_costume = enemy_imgs_2[costume]
 
+    # Gets tile info at a position
     def get_tile_at(self, x, y):
         self.tile_grid_x = math.floor(x / TILE_SIZE)
         self.tile_grid_y = math.floor(y / TILE_SIZE)
@@ -1433,6 +1482,7 @@ class Enemy:
             self.tile = TILE_GRID[self.tile_index - 1]
         self.tile_shape = TILE_SHAPE[self.tile - 1]
 
+    # Fixes collision in a certain direction
     def fix_collision_in_direction(self, dx, dy):
         self.fix_dx = dx
         self.fix_dy = dy
@@ -1450,6 +1500,7 @@ class Enemy:
             if self.solid < 1:
                 return       
 
+    # Fixes collision in a certain point
     def fix_collision_at_point(self, x, y, part=''):
         self.get_tile_at(x, y)
 
@@ -1499,6 +1550,7 @@ class Enemy:
         if self.fix_dx > 0:
             self.x += minus_TINY - self.mod_x
 
+    # Moves clones left-right
     def move_sprite_x(self):
         self.orig_y = self.y
         self.x += self.speed_x
@@ -1512,6 +1564,7 @@ class Enemy:
         elif self.y > self.orig_y:
             self.speed_x = self.speed_x * 0.85
 
+    # Moves clones up-down
     def move_sprite_y(self):
         self.y += self.speed_y
         self.falling += 1
@@ -1523,6 +1576,7 @@ class Enemy:
                 self.jumping = 99
             self.speed_y = 0
 
+    # Checks around clone at a point
     def check_around_player_at_xy(self, x, y):
         global COINS
 
@@ -1532,6 +1586,7 @@ class Enemy:
             COINS += 1
             coin_sound.play()
 
+    # Switches clone image under certain circumstances
     def paint_sprite(self):
         self.switch_costume('BIG')
 
@@ -1540,6 +1595,7 @@ class Enemy:
 
         self.switch_costume(self.costume)
 
+    # Flips clone
     def flip(self):
         kick_shell_sound.play()
         self.speed_y = 14
@@ -1547,6 +1603,7 @@ class Enemy:
         self.type = 'flip'
         self.direction = 180
 
+    # Checks if eligible of flipping
     def check_flip(self):
         if BUMP_INDEX == None:
             return
@@ -1559,6 +1616,7 @@ class Enemy:
             
         self.flip()
             
+    # Enemy scripts joined
     def _move_enemy_(self):
         if self.type == 'flip':
             self.x += self.speed_x
@@ -1643,6 +1701,7 @@ class Enemy:
             self.tick_fireball()
             return
 
+    # General clone movement (goombas, mushrooms, etc.)
     def general_move(self, acc_x, max_):
         self.speed_y += -1
         self.move_sprite_y()
@@ -1656,6 +1715,7 @@ class Enemy:
             
         self.move_sprite_x()
 
+    # Goomba and Koopa script
     def tick_goomba(self):
         global BOUNCE_PLAYER
 
@@ -1700,6 +1760,7 @@ class Enemy:
 
         self.check_flip()
 
+    # Power ups script
     def tick_life(self):
         global MARIO
 
@@ -1732,6 +1793,7 @@ class Enemy:
                     collect_1up()
                 enemies.remove(self)
 
+    # Piranha script
     def tick_piranha(self):
         LAYERS.remove('enemy')
         LAYERS.insert(LAYERS_BACKGROUND, 'enemy')
@@ -1759,6 +1821,7 @@ class Enemy:
 
                 mario_hurt()
 
+    # Shell script
     def tick_shell(self):
         global BOUNCE_PLAYER
 
@@ -1802,6 +1865,7 @@ class Enemy:
         self.check_flip()
         self.check_around_player_at_xy(self.x, self.y)
 
+    # Fireball
     def tick_fireball(self):
         self.frame += 1
         if self.frame > 2:
@@ -1827,6 +1891,7 @@ class Enemy:
         if self.direction == 270:
             self.direction = -90
 
+    # Conbines more scripts
     def move_enemy(self):
         global BUMP_INDEX
 
@@ -1838,6 +1903,7 @@ class Enemy:
         if self.visible == 1:
             self.hide = True
 
+    # Check if touching fireball / shell
     def move_player_after_enemy(self):
         if self.type == None:
             return
@@ -1856,6 +1922,7 @@ class Enemy:
             
             self.hide = True
 
+    # Hides fireballs
     def hide_fireballs(self):
         if self.type == 'Fireball':
             self.hide = True
@@ -1864,6 +1931,7 @@ class Enemy:
         if self.visible > 0:
             self.hide = False
 
+    # Checks fireballs
     def check_fireballs(self):
         if self.type == 'Fireball':
             self.hide = False
@@ -1876,6 +1944,7 @@ class Enemy:
             
             self.hide = True
 
+    # Conbines even more scripts
     def position_tiles(self):
         if self.visible > 0:
             self.hide = False
@@ -1884,26 +1953,31 @@ class Enemy:
             return
         self.paint_sprite()
 
+    # Entity clear and setup
     def LEVEL_done_loading(self):
         ENTITY_clear()
         ENTITY_setup()
 
+    # Clears entities
     def ENTITY_clear(self):
         if self.type == None:
             return
 
         enemies.remove(self)
 
+    # Sets up entites
     def ENTITY_setup(self):
         if not self.type == None:
             return
 
         self.spawn_loop()
 
+    # Spawns fireball
     def mario_fireball(self):
         if self.type == None:
             enemies.append(Enemy(info=['Fireball', 0, 0, 0, 0, 0, 0, 0]))
 
+    # Draws enemy
     def draw(self):
         if self.type == None or self.hide:
             return
@@ -1931,6 +2005,7 @@ class Enemy:
             screen.blit(self.real_costume, [pos[0] - width, pos[1] - height])
 
 class Editor:
+    # Initialize
     def __init__(self):
         global EDITOR, LEVEL_NUM, TILE_GRID, GRID_WIDTH, GRID_HEIGHT
 
@@ -2102,6 +2177,7 @@ class Editor:
             GRID_HEIGHT = 40
             self.generate_level()
 
+    # Generate level
     def generate_level(self):
         global TILE_GRID, OBJECT_IDX, OBJECT_TYPE
         TILE_GRID = []
@@ -2112,22 +2188,26 @@ class Editor:
             self.add_boxed_column()
         self.add_wall_column()
 
+    # Adds wall column
     def add_wall_column(self):
         for _ in range(GRID_HEIGHT):
             TILE_GRID.append(10)
 
+    # Adds a boxed-in column
     def add_boxed_column(self):
         TILE_GRID.append(7)
         for _ in range(GRID_HEIGHT - 2):
             TILE_GRID.append(2)
         TILE_GRID.append(10)
 
+    # Gets tile info at a position
     def get_tile_at(self, x, y):
         self.tile_grid_x = math.floor(x / TILE_SIZE)
         self.tile_grid_y = math.floor(y / TILE_SIZE)
         self.tile_index = 1 + self.tile_grid_y + (self.tile_grid_x * GRID_HEIGHT)
         self.tile = TILE_GRID[self.tile_index - 1]
 
+    # Auto tile fix
     def fix_costume_at(self, idx):
         if pygame.key.get_pressed()[K_SPACE]:
             if not idx in self.edited_indexes:
@@ -2157,6 +2237,7 @@ class Editor:
                     return
             self.tile += 1
 
+    # Build tile recipe
     def build_recipe(self, edge_index):
         if pygame.key.get_pressed()[K_SPACE]:
             if not edge_index in self.edited_indexes:
@@ -2169,6 +2250,7 @@ class Editor:
         else:
             self.recipe = f'{self.recipe}0'
 
+    # Insert tile into tile_grid
     def paint_tile(self):
         if self.brush == 0:
             if self.tile == self.chosen_brush:
@@ -2201,6 +2283,7 @@ class Editor:
             self.fix_costume_at(self.tile_index - 1)
             self.fix_costume_at(self.tile_index - GRID_HEIGHT)
 
+    # Insert entity into tile_grid
     def paint_entity(self):
         if self.brush > 0:
             return
@@ -2222,6 +2305,7 @@ class Editor:
         ENTITY_clear()
         ENTITY_setup()
 
+    # Switches selected brush
     def next_brush(self, key):
         for _ in range(len(self.tile_keymap)):
             if self.chosen_brush < len(self.tile_keymap):
@@ -2238,6 +2322,7 @@ class Editor:
                 if TILE_GROUPS.index(self.tile_group) + 1 == self.chosen_brush:
                     return
 
+    # Main movement
     def move_player(self):
         if EDITOR < 1:
             return
@@ -2257,6 +2342,7 @@ class Editor:
         self.paint_tile()
 
 class Particle:
+    # Initialize
     def __init__(self, dummy=False, info=False):
         global PARTICLES
 
@@ -2269,6 +2355,7 @@ class Particle:
         self.real_y = 0
         self.costume = smoke_1
 
+    # Code for when a clone is created
     def start_as_clone(self, info):
         self.frame = 1
         self.type = info[0]
@@ -2279,6 +2366,7 @@ class Particle:
             self.speed_y = 12
             coin_sound.play()
 
+    # Spawn particles
     def spawn_particles(self):
         while not (len(PARTICLES) == 0):
             type = PARTICLES[0]
@@ -2289,12 +2377,14 @@ class Particle:
             for _ in range(3):
                 PARTICLES.pop(0)
 
+    # Position with an image
     def position_with_costume(self, costume):
         self.costume = particle_imgs[7]
         self.real_x = self.x - CAMERA_X
         self.real_y = self.y - CAMERA_Y
         self.costume = particle_imgs[costume]
 
+    # Smoke script
     def tick_smoke(self):
         if not self.frame < 3:
             particles.remove(self)
@@ -2303,6 +2393,7 @@ class Particle:
         self.position_with_costume(math.floor(self.frame))
         self.frame += 0.4
 
+    # Coin script
     def tick_coin(self):
         self.speed_y += -1
         if self.speed_y < -12:
@@ -2311,7 +2402,8 @@ class Particle:
 
         self.position_with_costume(3 + (math.floor(self.frame) % 4))
         self.frame += 0.5
-
+    
+    # Score script
     def tick_score(self):
         self.y += 1
         self.position_with_costume(8)
@@ -2319,6 +2411,7 @@ class Particle:
         if self.frame > 60: # 2 seconds
             particles.remove(self)
 
+    # Join scripts together
     def position_tiles(self):
         if self.frame == None:
             self.spawn_particles()
@@ -2334,6 +2427,7 @@ class Particle:
         
         self.tick_smoke()
 
+    # Draw particles
     def draw(self):
         if self.frame == None:
             return
@@ -2343,6 +2437,7 @@ class Particle:
         screen.blit(self.costume, [pos[0] - (width / 2), pos[1] - (height / 2)])
 
 class Controls:
+    # Initialize
     def __init__(self):
         self.left = 0
         self.right = 0
@@ -2352,6 +2447,7 @@ class Controls:
         self.y_axis = 0
         self.button_B = None
 
+    # Check controls
     def check_controls(self):
         keys = pygame.key.get_pressed()
 
@@ -2371,6 +2467,7 @@ class Controls:
             self.button_B = None
 
 class Level_Store:
+    # Initialize
     def __init__(self):
         self.level_store = read_tile_grid()
 
@@ -2403,6 +2500,7 @@ class Level_Store:
             'z'
         ]
 
+    # converts value to integer
     def Int(self, string):
         try:
             integer = int(string)
@@ -2410,9 +2508,11 @@ class Level_Store:
             integer = 9999
         return integer
 
+    # Writes value
     def write_value(self, value, delimeter):
         self.encoded = f'{self.encoded}{value}{delimeter}'
 
+    # Reads letter
     def read_letter(self):
         try:
             self.letter = self.encoded[self.read_index - 1]
@@ -2420,6 +2520,7 @@ class Level_Store:
             self.letter = ''
         self.read_index += 1
 
+    # Reads value
     def read_value(self):
         self.value = ''
         self.read_letter()
@@ -2427,6 +2528,7 @@ class Level_Store:
             self.value = self.value + self.letter
             self.read_letter()
 
+    # Save tiles
     def save_tile_grid(self):
         self.write_value(GRID_WIDTH, '_')
         self.write_value(GRID_HEIGHT, '_')
@@ -2449,6 +2551,7 @@ class Level_Store:
 
         self.write_value(self.tile, self.a_to_z[self.length - 1])
 
+    # Save entities
     def save_objects(self):
         self.row = 1
         self.write_value(len(OBJECT_IDX), '_')
@@ -2458,6 +2561,7 @@ class Level_Store:
             self.write_value(OBJECT_TYPE[self.row - 1], '_')
             self.row += 1
 
+    # Load tiles
     def load_tile_grid(self):
         global TILE_GRID, GRID_WIDTH, GRID_HEIGHT
 
@@ -2485,6 +2589,7 @@ class Level_Store:
                     if self.tile_index > GRID_HEIGHT:
                         return
 
+    # Load entities
     def load_objects(self):
         global OBJECT_IDX, OBJECT_TYPE
 
@@ -2498,6 +2603,7 @@ class Level_Store:
             self.read_value()
             OBJECT_TYPE.append(self.Int(self.value))
 
+    # Save level
     def save_level(self, level_num):
         self.encoded = ''
         self.write_value(1, '_')
@@ -2510,6 +2616,7 @@ class Level_Store:
 
         self.level_store[level_num - 1] = self.encoded
 
+    # Load level
     def load_level(self, level_num):
         try:
             self.encoded = read_tile_grid()[level_num - 1].replace('\n', '')
@@ -2524,15 +2631,18 @@ class Level_Store:
         self.load_tile_grid()
         self.load_objects()
 
+    # Save Level
     def LEVEL_save(self):
         self.save_level(LEVEL_NUM)
         write_tile_grid()
 
+    # Load Level
     def LEVEL_load(self):
         self.load_level(LEVEL_NUM)
         LEVEL_done_loading()
 
 class Background:
+    # Initialize
     def __init__(self, costume):
         self.real_x = 0
         self.real_y = 0
@@ -2542,11 +2652,13 @@ class Background:
         self.x = (costume - 1) * self.sprite_width
         self.screen_x = 0
 
+    # Position background
     def position_tiles(self):
         self.screen_x = self.x - (CAMERA_X / 2)
         self.real_x = (self.screen_x % (self.sprite_width * 2)) - self.sprite_width
         self.real_y = (CENTER_Y + (2 * TILE_SIZE)) - (CAMERA_Y / 2)
 
+    # Draw background
     def draw(self):
         image = background_imgs[self.costume]
         height = image.get_height()
@@ -2554,31 +2666,39 @@ class Background:
         screen.blit(image, [pos[0] - (self.sprite_width / 2), pos[1] - (height / 2)])
 
 class Sounds:
+    # Nothing
     def __init__(self):
         pass
 
+    # Main music
     def music(self):
         Music_L1.stop()
         if EDITOR < 1:
             Music_L1.play(-1)
 
+    # Start music
     def LEVEL_start_game_loop(self):
         self.music()
 
+    # Start music
     def LEVEL_start_game_loop_respawn(self):
         self.music()
 
+    # Stop music
     def LEVEL_stop(self):
         Music_L1.stop()
 
+    # Stop music
     def mario_lose_life(self):
         Music_L1.stop()
 
+    # Stop music and start end music
     def mario_level_complete(self):
         Music_L1.stop()
         star_power_sound.stop()
         course_clear_sound.play()
 
+    # Star power music
     def collect_star_power(self):
         global STAR_POWER
 
@@ -2587,6 +2707,7 @@ class Sounds:
 
         star_power_sound.play()
 
+    # Stops star power music
     def move_player(self):
         global STAR_POWER
 
@@ -2598,32 +2719,39 @@ class Sounds:
             self.music()
 
 
+# Checks controls
 def check_controls():
     controls.check_controls()
 
+# Moves player
 def move_player():
     mario.move_player()
     editor.move_player()
     sounds.move_player()
 
+# Moves enemy
 def move_enemy():
     for enemy in enemies:
         enemy.move_enemy()
 
+# Moves player after enemy
 def move_player_after_enemy():
     mario.move_player_after_enemy()
 
     for enemy in enemies:
         enemy.move_player_after_enemy()
 
+# Hides fireballs
 def hide_fireballs():
     for enemy in enemies:
         enemy.hide_fireballs()
 
+# Checks fireballs
 def check_fireballs():
     for enemy in enemies:
         enemy.check_fireballs()
 
+# Postitions tiles
 def position_tiles():
     mario.position_tiles()
 
@@ -2639,6 +2767,7 @@ def position_tiles():
     for background in backgrounds:
         background.position_tiles()
 
+# Starts game
 def LEVEL_start_game_loop():
     global FIREBALLS
 
@@ -2646,6 +2775,7 @@ def LEVEL_start_game_loop():
     mario.LEVEL_start_game_loop()
     sounds.LEVEL_start_game_loop()
 
+# Starts game and mario respawns
 def LEVEL_start_game_loop_respawn():
     try:
         mario.LEVEL_start_game_loop_respawn()
@@ -2653,10 +2783,12 @@ def LEVEL_start_game_loop_respawn():
     except:
         pass
 
+# Stops game
 def LEVEL_stop():
     mario.LEVEL_stop()
     sounds.LEVEL_stop()
 
+# Actions after level loads
 def LEVEL_done_loading():
     mario.LEVEL_done_loading()
     for tile in tiles:
@@ -2667,38 +2799,48 @@ def LEVEL_done_loading():
     except:
         pass
 
+# Continue game
 def LEVEL_continue_game_loop():
     mario.LEVEL_continue_game_loop()
 
+# Clear enemies
 def ENTITY_clear():
     for enemy in enemies:
         enemy.ENTITY_clear()
 
+# Setup enemies
 def ENTITY_setup():
     for enemy in enemies:
         enemy.ENTITY_setup()
 
+# Mario death
 def mario_lose_life():
     sounds.mario_lose_life()
     mario.mario_lose_life()
 
+# Level complete
 def mario_level_complete():
     sounds.mario_level_complete()
     mario.mario_level_complete()
 
+# Mario upgrade
 def collect_1up():
     mario.collect_1up()
 
+# Mario downgrade
 def mario_hurt():
     mario.mario_hurt()
 
+# Mario fireball throw
 def mario_fireball():
     for enemy in enemies:
         enemy.mario_fireball()
 
+# Mario collects star
 def collect_star_power():
     sounds.collect_star_power()
 
+# Setup tiles
 def setup():
     tile_index = 1
     tile_x = TILE_SIZE / 2
@@ -2711,6 +2853,7 @@ def setup():
         tile_x += TILE_SIZE
         tile_index += GRID_HEIGHT - CLONE_COUNT_Y
 
+# Draw screen
 def draw():
     screen.fill((128, 168, 248))
 
